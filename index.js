@@ -1,6 +1,4 @@
 //todo:
-// LOGGING hai
-// enncapsulate all socket.emit socket.disconnect pairs into n error reporting stuff
 // break down the codebase
 // write better DDOS protections
 // client slde repsonsivity that's not limited to vanilla alerts
@@ -36,7 +34,7 @@ var cur_connections = 0;
 const max_codesend_per_min = 20;
 const max_inactive_time = 6;
 
-var logstream = fs.createWriteStream("append.txt", {flags:'a'});
+var logstream = fs.createWriteStream("log", {flags:'a'});
 function logwrite(str, ip){
 	logstream.write (new Date().toISOString() + " : " + ip + " " + str + '\n\n')
 }
