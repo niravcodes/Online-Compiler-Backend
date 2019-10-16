@@ -1,11 +1,12 @@
 //todo:
-//LOGGING hai
-//enncapsulate all socket.emit socket.disconnect pairs into n error reporting stuff
-//break down the codebase
-//write better DDOS protections
-//client slde repsonsivity that's not limited to vanilla alerts
-//make alerts seem friendly and witty, that's the way you impress people.
-//if not in real life then in software. (sedlyf)
+// LOGGING hai
+// enncapsulate all socket.emit socket.disconnect pairs into n error reporting stuff
+// break down the codebase
+// write better DDOS protections
+// client slde repsonsivity that's not limited to vanilla alerts
+// make alerts seem friendly and witty, that's the way you impress people.
+// if not in real life then in software. (sedlyf)
+// Rework the compiler to emit correct return values on exit.
 //
 // Messages sent and received by websockets
 // 	1. toolongsincelasttalk : user has been inactive for `max_inactive_time`
@@ -22,7 +23,6 @@ var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io')(server, { serveClient: false, maxHttpBufferSize: 6000 }); // max size accepted ~ 6kB
 var cors = require('cors')
-
 const { exec, spawn } = require('child_process');
 const fs = require('fs-extra');
 
@@ -35,6 +35,11 @@ const max_connections = 600;
 var cur_connections = 0;
 const max_codesend_per_min = 20;
 const max_inactive_time = 6;
+
+var logstream = fs.createWriteStream("append.txt", {flags:'a'});
+function logwrite(str, ip){
+	logstream.write (new Date().toISOString() + " : " + ip + " " + str + '\n\n')
+}
 
 io.on('connection', function (socket) {
 	var cur_codesend = 0;
@@ -49,17 +54,18 @@ io.on('connection', function (socket) {
 		}
 	}, 60000) // One minute
 
+	var id = socket.id;
 	if (cur_connections >= max_connections) {
 		socket.emit('toomanyconnections');
+		logwrite ("Denied Connection because too many", socket.request.connection.remoteAddress)
 		socket.disconnect(true);
-		return console.log("Connection rejected because too many");
+		return 0;
 	}
 	else {
 		cur_connections += 1;
-		console.log(cur_connections + " connections happening");
+		logwrite (cur_connections + "connections happening now\nLatest Connector: "+socket.id, socket.request.connection.remoteAddress);
 	}
 
-	var id = socket.id;
 	var directory = "/mnt/resource/" + id;
 	console.log(id)
 	socket.emit('status', { status: 'conn' });
@@ -67,7 +73,7 @@ io.on('connection', function (socket) {
 	socket.on('disconnect', () => {
 		cur_connections -= 1;
 		if (cur_connections < 0) cur_connections = 0; // for weird acync errors
-		console.log(id + "disconnect, this many left: " + cur_connections);
+		logwrite(id + "disconnects", socket.request.connection.remoteAddress);
 		fs.remove(directory)
 	})
 
@@ -78,6 +84,7 @@ io.on('connection', function (socket) {
 		if (cur_codesend >= max_codesend_per_min) {
 			return 0;
 		}
+
 		var code = data.code;
 		if (code === "") return console.log("empty");
 		if (previous_code === code) execute_user_binary();
